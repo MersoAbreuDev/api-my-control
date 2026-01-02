@@ -30,24 +30,6 @@ npm run start:prod
 Após iniciar o servidor, acesse:
 - **Swagger UI**: http://localhost:3000/api/docs
 
-## 🔐 Autenticação
-
-A API utiliza JWT (JSON Web Tokens) para autenticação.
-
-### Login
-```bash
-POST /auth/login
-{
-  "email": "mersoabreu@gmail.com",
-  "password": "123456"
-}
-```
-
-### Usar token nas requisições
-```bash
-Authorization: Bearer <seu_token_jwt>
-```
-
 ## 📋 Endpoints
 
 ### Autenticação (`/auth`)
@@ -67,7 +49,7 @@ Authorization: Bearer <seu_token_jwt>
 
 ## 🔒 Rotas Protegidas
 
-Todas as rotas, exceto `/auth/login` e `/auth/forgot-password`, requerem autenticação JWT.
+Todas as rotas, exceto `/auth/login` e `/auth/forgot-password`, requerem autenticação.
 
 ## 📝 Estrutura do Projeto
 
