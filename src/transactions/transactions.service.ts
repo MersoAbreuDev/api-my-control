@@ -1,0 +1,193 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Transaction, TransactionType, TransactionStatus } from '../entities/transaction.entity';
+import { CreateTransactionDto, TransactionStatus as DtoTransactionStatus } from './dto/create-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
+
+/**
+ * Serviço de transações
+ * Gerencia CRUD de transações financeiras
+ */
+@Injectable()
+export class TransactionsService {
+  constructor(
+    @InjectRepository(Transaction)
+    private transactionRepository: Repository<Transaction>,
+  ) {}
+
+  /**
+   * Cria uma nova transação
+   */
+  async create(userId: number, createTransactionDto: CreateTransactionDto): Promise<Transaction> {
+    const transaction = this.transactionRepository.create({
+      userId,
+      description: createTransactionDto.description,
+      amount: createTransactionDto.amount,
+      category: createTransactionDto.category,
+      type: createTransactionDto.type as TransactionType,
+      status: TransactionStatus.OPEN,
+      dueDate: new Date(createTransactionDto.dueDate),
+      recurrence: createTransactionDto.recurrence,
+      createdBy: userId, // Usuário que criou
+      updatedBy: userId, // Na criação, também é o mesmo usuário
+    });
+
+    return this.transactionRepository.save(transaction);
+  }
+
+  /**
+   * Busca todas as transações do usuário
+   */
+  async findAll(
+    userId: number,
+    type?: string,
+    status?: string,
+    month?: number,
+    year?: number,
+  ): Promise<Transaction[]> {
+    const queryBuilder = this.transactionRepository
+      .createQueryBuilder('transaction')
+      .where('transaction.userId = :userId', { userId })
+      .orderBy('transaction.dueDate', 'DESC');
+
+    if (type) {
+      queryBuilder.andWhere('transaction.type = :type', { type });
+    }
+
+    if (status) {
+      queryBuilder.andWhere('transaction.status = :status', { status });
+    }
+
+    // Filtrar por mês e ano baseado na data de vencimento (dueDate)
+    if (month && year) {
+      // Cria o primeiro e último dia do mês/ano no formato YYYY-MM-DD
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      // Último dia do mês
+      const lastDay = new Date(year, month, 0).getDate();
+      const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      
+      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', {
+        startDate,
+      });
+      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', {
+        endDate,
+      });
+    } else if (month) {
+      // Se só tiver mês, usa o ano atual
+      const currentYear = new Date().getFullYear();
+      const startDate = `${currentYear}-${String(month).padStart(2, '0')}-01`;
+      const lastDay = new Date(currentYear, month, 0).getDate();
+      const endDate = `${currentYear}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      
+      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', {
+        startDate,
+      });
+      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', {
+        endDate,
+      });
+    } else if (year) {
+      // Se só tiver ano, filtra todo o ano
+      const startDate = `${year}-01-01`;
+      const endDate = `${year}-12-31`;
+      
+      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', {
+        startDate,
+      });
+      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', {
+        endDate,
+      });
+    }
+
+    return queryBuilder.getMany();
+  }
+
+  /**
+   * Busca uma transação por ID
+   */
+  async findOne(id: number, userId: number): Promise<Transaction> {
+    const transaction = await this.transactionRepository.findOne({
+      where: {
+        id,
+        userId,
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException(`Transação com ID ${id} não encontrada`);
+    }
+
+    return transaction;
+  }
+
+  /**
+   * Atualiza uma transação
+   */
+  async update(
+    id: number,
+    userId: number,
+    updateTransactionDto: UpdateTransactionDto,
+  ): Promise<Transaction> {
+    // Verifica se a transação existe
+    const transaction = await this.findOne(id, userId);
+
+    if (updateTransactionDto.dueDate) {
+      transaction.dueDate = new Date(updateTransactionDto.dueDate);
+    }
+
+    if (updateTransactionDto.status === DtoTransactionStatus.PAID) {
+      transaction.status = TransactionStatus.PAID;
+      transaction.paidDate = new Date();
+    }
+
+    if (updateTransactionDto.description) {
+      transaction.description = updateTransactionDto.description;
+    }
+
+    if (updateTransactionDto.amount !== undefined) {
+      transaction.amount = updateTransactionDto.amount;
+    }
+
+    if (updateTransactionDto.category) {
+      transaction.category = updateTransactionDto.category;
+    }
+
+    if (updateTransactionDto.type) {
+      transaction.type = updateTransactionDto.type as TransactionType;
+    }
+
+    if (updateTransactionDto.recurrence) {
+      transaction.recurrence = updateTransactionDto.recurrence;
+    }
+
+    // Atualiza o usuário que modificou a transação
+    transaction.updatedBy = userId;
+
+    return this.transactionRepository.save(transaction);
+  }
+
+  /**
+   * Remove uma transação
+   */
+  async remove(id: number, userId: number): Promise<void> {
+    // Verifica se a transação existe
+    await this.findOne(id, userId);
+
+    await this.transactionRepository.delete(id);
+  }
+
+  /**
+   * Marca transação como paga
+   */
+  async markAsPaid(id: number, userId: number): Promise<Transaction> {
+    // Verifica se a transação existe
+    const transaction = await this.findOne(id, userId);
+
+    transaction.status = TransactionStatus.PAID;
+    transaction.paidDate = new Date();
+    transaction.updatedBy = userId; // Atualiza o usuário que modificou
+
+    return this.transactionRepository.save(transaction);
+  }
+}
+
