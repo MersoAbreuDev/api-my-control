@@ -7,9 +7,18 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Habilita CORS para o frontend
+  const defaultOrigins = [
+    'http://localhost:4200',
+    'http://localhost:3000',
+    'https://my-control-phi.vercel.app',
+    'http://api-jhukyy-dcf077-168-231-92-86.traefik.me',
+  ];
+  
   const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:4200', 'http://localhost:3000'];
+    ? [...defaultOrigins, ...process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())]
+    : defaultOrigins;
+
+  console.log('🌐 CORS - Origens permitidas:', allowedOrigins);
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -21,6 +30,7 @@ async function bootstrap() {
         return callback(null, true);
       }
       
+      console.warn(`⚠️ CORS bloqueado para origem: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
