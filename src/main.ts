@@ -25,8 +25,20 @@ async function bootstrap() {
       // Permite requisições sem origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
       
-      // Permite origens na lista ou qualquer origem em desenvolvimento
-      if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      // Permite origens na lista
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Permite todos os subdomínios do Vercel (*.vercel.app)
+      if (origin.endsWith('.vercel.app')) {
+        console.log(`✅ CORS permitido para subdomínio Vercel: ${origin}`);
+        return callback(null, true);
+      }
+      
+      // Permite qualquer origem em desenvolvimento (NODE_ENV !== 'production')
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`✅ CORS permitido (desenvolvimento) para: ${origin}`);
         return callback(null, true);
       }
       
