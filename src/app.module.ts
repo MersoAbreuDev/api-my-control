@@ -27,7 +27,10 @@ import { Transaction } from './entities/transaction.entity';
           throw new Error('Invalid DATABASE_URL format');
         }
 
-        const [, username, password, host, port, database] = urlMatch;
+        const [, username, passwordEncoded, host, port, database] = urlMatch;
+
+        // Decodificar a senha (pode conter caracteres especiais como @ codificados como %40)
+        const password = decodeURIComponent(passwordEncoded);
 
         // Configuração SSL para bancos de dados remotos (PlanetScale, Railway, etc.)
         const isRemoteHost = host !== 'localhost' && host !== '127.0.0.1';
@@ -49,7 +52,9 @@ import { Transaction } from './entities/transaction.entity';
           } : undefined,
           // Timeout aumentado para conexões remotas
           connectTimeout: 60000,
-          acquireTimeout: 60000,
+          extra: {
+            connectionLimit: 10,
+          },
         };
       },
       inject: [ConfigService],
