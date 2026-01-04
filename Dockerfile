@@ -8,8 +8,8 @@ COPY package*.json ./
 COPY tsconfig*.json ./
 COPY nest-cli.json ./
 
-# Instalar dependências
-RUN npm ci
+# Instalar dependências (usando --legacy-peer-deps para resolver conflitos)
+RUN npm ci --legacy-peer-deps
 
 # Copiar código fonte
 COPY . .
@@ -29,8 +29,8 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copiar arquivos de dependências
 COPY package*.json ./
 
-# Instalar apenas dependências de produção
-RUN npm ci --only=production && \
+# Instalar apenas dependências de produção (usando --legacy-peer-deps)
+RUN npm ci --only=production --legacy-peer-deps && \
     npm cache clean --force
 
 # Copiar arquivos compilados do stage de build
