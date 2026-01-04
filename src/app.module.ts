@@ -29,6 +29,9 @@ import { Transaction } from './entities/transaction.entity';
 
         const [, username, password, host, port, database] = urlMatch;
 
+        // Configuração SSL para bancos de dados remotos (PlanetScale, Railway, etc.)
+        const isRemoteHost = host !== 'localhost' && host !== '127.0.0.1';
+        
         return {
           type: 'mysql',
           host,
@@ -40,6 +43,13 @@ import { Transaction } from './entities/transaction.entity';
           synchronize: true, // Cria/atualiza tabelas automaticamente
           logging: false,
           charset: 'utf8mb4',
+          // Configurações SSL para conexões remotas
+          ssl: isRemoteHost ? {
+            rejectUnauthorized: false, // Para bancos de dados em nuvem
+          } : undefined,
+          // Timeout aumentado para conexões remotas
+          connectTimeout: 60000,
+          acquireTimeout: 60000,
         };
       },
       inject: [ConfigService],
