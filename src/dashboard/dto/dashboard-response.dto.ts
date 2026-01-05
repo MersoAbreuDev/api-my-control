@@ -88,6 +88,46 @@ export class DashboardResponseDto {
 }
 
 /**
+ * DTO para transação de trabalho
+ */
+export class WorkTransactionDto {
+  @ApiProperty({
+    description: 'ID da transação',
+    example: 1,
+    type: Number,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: 'Descrição da transação',
+    example: 'Salário Janeiro',
+    type: String,
+  })
+  description: string;
+
+  @ApiProperty({
+    description: 'Categoria da transação',
+    example: 'Trabalho',
+    type: String,
+  })
+  category: string;
+
+  @ApiProperty({
+    description: 'Valor da transação (em centavos)',
+    example: 500000,
+    type: Number,
+  })
+  amount: number;
+
+  @ApiProperty({
+    description: 'Data de vencimento',
+    example: '2026-01-15T00:00:00.000Z',
+    type: String,
+  })
+  dueDate: string;
+}
+
+/**
  * DTO para maior renda mês a mês (categoria Trabalho)
  */
 export class WorkIncomeMonthlyDto {
@@ -97,13 +137,6 @@ export class WorkIncomeMonthlyDto {
     type: String,
   })
   month: string;
-
-  @ApiProperty({
-    description: 'Valor total da renda de trabalho no mês (em centavos)',
-    example: 500000,
-    type: Number,
-  })
-  value: number;
 
   @ApiProperty({
     description: 'Número do mês (1-12)',
@@ -118,5 +151,18 @@ export class WorkIncomeMonthlyDto {
     type: Number,
   })
   year: number;
+
+  @ApiProperty({
+    description: 'Valor total da renda de trabalho no mês (em centavos)',
+    example: 500000,
+    type: Number,
+  })
+  totalValue: number;
+
+  @ApiProperty({
+    description: 'Transações de trabalho do mês',
+    type: [WorkTransactionDto],
+  })
+  transactions: WorkTransactionDto[];
 }
 

@@ -67,13 +67,13 @@ export class DashboardController {
   }
 
   /**
-   * Retorna a maior renda mês a mês pela categoria "Trabalho"
-   * Útil para preencher gráficos de renda mensal
+   * Retorna a renda mês a mês pela categoria "Trabalho" com descrição e detalhes
+   * Útil para dashboard com transações detalhadas
    */
   @Get('work-income')
   @ApiOperation({
-    summary: 'Renda de trabalho mês a mês',
-    description: 'Retorna a soma de todas as receitas pagas da categoria "Trabalho" mês a mês, útil para preencher gráficos.',
+    summary: 'Renda de trabalho mês a mês com detalhes',
+    description: 'Retorna todas as receitas pagas da categoria "Trabalho" agrupadas por mês, incluindo descrição, categoria e valores individuais. Útil para dashboard detalhado.',
   })
   @ApiQuery({
     name: 'year',

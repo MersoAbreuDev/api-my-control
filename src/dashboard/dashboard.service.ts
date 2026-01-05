@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Transaction, TransactionType, TransactionStatus } from '../entities/transaction.entity';
-import { DashboardResponseDto, CategoryMonthlyDataDto, WorkIncomeMonthlyDto } from './dto/dashboard-response.dto';
+import { DashboardResponseDto, CategoryMonthlyDataDto, WorkIncomeMonthlyDto, WorkTransactionDto } from './dto/dashboard-response.dto';
 
 /**
  * Serviço de dashboard
@@ -154,8 +154,8 @@ export class DashboardService {
   }
 
   /**
-   * Retorna a maior renda mês a mês pela categoria "Trabalho"
-   * Útil para preencher gráficos de renda mensal
+   * Retorna a renda mês a mês pela categoria "Trabalho" com descrição e detalhes
+   * Útil para dashboard com transações detalhadas
    */
   async getWorkIncomeByMonth(year?: number): Promise<WorkIncomeMonthlyDto[]> {
     const now = new Date();
@@ -172,15 +172,20 @@ export class DashboardService {
         status: TransactionStatus.PAID,
         dueDate: Between(startDate, endDate),
       },
+      order: {
+        dueDate: 'ASC',
+      },
     });
 
-    // Agrupa por mês e soma os valores
-    const monthMap = new Map<number, number>();
+    // Agrupa transações por mês
+    const monthMap = new Map<number, Transaction[]>();
 
     transactions.forEach((transaction) => {
       const month = new Date(transaction.dueDate).getMonth() + 1; // 1-12
-      const currentValue = monthMap.get(month) || 0;
-      monthMap.set(month, currentValue + transaction.amount);
+      if (!monthMap.has(month)) {
+        monthMap.set(month, []);
+      }
+      monthMap.get(month)!.push(transaction);
     });
 
     // Converte para o formato de resposta
@@ -203,12 +208,24 @@ export class DashboardService {
 
     // Para cada mês do ano (1-12)
     for (let month = 1; month <= 12; month++) {
-      const value = monthMap.get(month) || 0;
+      const monthTransactions = monthMap.get(month) || [];
+      const totalValue = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+      // Converte transações para DTO
+      const transactionDtos: WorkTransactionDto[] = monthTransactions.map((t) => ({
+        id: t.id,
+        description: t.description,
+        category: t.category,
+        amount: t.amount,
+        dueDate: t.dueDate.toISOString(),
+      }));
+
       result.push({
         month: `${monthNames[month - 1]} ${targetYear}`,
-        value,
         monthNumber: month,
         year: targetYear,
+        totalValue,
+        transactions: transactionDtos,
       });
     }
 
