@@ -160,6 +160,34 @@ export class WorkIncomeMonthlyDto {
   totalValue: number;
 
   @ApiProperty({
+    description: 'Total de despesas pagas no mês (em centavos)',
+    example: 195000,
+    type: Number,
+  })
+  despesasPagas: number;
+
+  @ApiProperty({
+    description: 'Total de receitas pagas no mês (em centavos)',
+    example: 500000,
+    type: Number,
+  })
+  receitasPagas: number;
+
+  @ApiProperty({
+    description: 'Total de despesas em aberto no mês (em centavos)',
+    example: 50000,
+    type: Number,
+  })
+  despesasEmAberto: number;
+
+  @ApiProperty({
+    description: 'Total de receitas em aberto no mês (em centavos)',
+    example: 100000,
+    type: Number,
+  })
+  receitasEmAberto: number;
+
+  @ApiProperty({
     description: 'Transações de trabalho do mês',
     type: [WorkTransactionDto],
   })

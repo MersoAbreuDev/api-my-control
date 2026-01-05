@@ -183,8 +183,31 @@ export class DashboardService {
       },
     });
 
-    // Calcula total do mês
+    // Busca todas as transações do mês para calcular totais
+    const allTransactions = await this.transactionRepository.find({
+      where: {
+        dueDate: Between(startDate, endDate),
+      },
+    });
+
+    // Calcula totais
     const totalValue = transactions.reduce((sum, t) => sum + t.amount, 0);
+    
+    const despesasPagas = allTransactions
+      .filter((t) => t.type === TransactionType.EXPENSE && t.status === TransactionStatus.PAID)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const receitasPagas = allTransactions
+      .filter((t) => t.type === TransactionType.INCOME && t.status === TransactionStatus.PAID)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const despesasEmAberto = allTransactions
+      .filter((t) => t.type === TransactionType.EXPENSE && t.status === TransactionStatus.OPEN)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const receitasEmAberto = allTransactions
+      .filter((t) => t.type === TransactionType.INCOME && t.status === TransactionStatus.OPEN)
+      .reduce((sum, t) => sum + t.amount, 0);
 
     // Converte transações para DTO
     const transactionDtos: WorkTransactionDto[] = transactions.map((t) => ({
@@ -216,6 +239,10 @@ export class DashboardService {
       monthNumber: targetMonth,
       year: targetYear,
       totalValue,
+      despesasPagas,
+      receitasPagas,
+      despesasEmAberto,
+      receitasEmAberto,
       transactions: transactionDtos,
     };
   }
