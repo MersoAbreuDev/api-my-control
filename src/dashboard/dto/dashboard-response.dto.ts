@@ -51,6 +51,13 @@ export class DashboardResponseDto {
   saldo: number;
 
   @ApiProperty({
+    description: 'Total de despesas em aberto no período',
+    example: 50000,
+    type: Number,
+  })
+  despesasEmAberto: number;
+
+  @ApiProperty({
     description: 'Mês de referência',
     example: 'Jan 2026',
     type: String,

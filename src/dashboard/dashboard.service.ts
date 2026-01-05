@@ -30,23 +30,36 @@ export class DashboardService {
     const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59);
 
     // Busca transações pagas do mês (todas as transações, não apenas do usuário)
-    const transactions = await this.transactionRepository.find({
+    const transactionsPaid = await this.transactionRepository.find({
       where: {
         status: TransactionStatus.PAID,
         dueDate: Between(startDate, endDate),
       },
     });
 
-    // Calcula totais
-    const receitas = transactions
+    // Busca transações em aberto do mês
+    const transactionsOpen = await this.transactionRepository.find({
+      where: {
+        status: TransactionStatus.OPEN,
+        dueDate: Between(startDate, endDate),
+      },
+    });
+
+    // Calcula totais de transações pagas
+    const receitas = transactionsPaid
       .filter((t) => t.type === TransactionType.INCOME)
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const despesas = transactions
+    const despesas = transactionsPaid
       .filter((t) => t.type === TransactionType.EXPENSE)
       .reduce((sum, t) => sum + t.amount, 0);
 
     const saldo = receitas - despesas;
+
+    // Calcula despesas em aberto
+    const despesasEmAberto = transactionsOpen
+      .filter((t) => t.type === TransactionType.EXPENSE)
+      .reduce((sum, t) => sum + t.amount, 0);
 
     const monthNames = [
       'Jan',
@@ -70,6 +83,7 @@ export class DashboardService {
       receitas,
       despesas,
       saldo,
+      despesasEmAberto,
       month: `${monthNames[targetMonth - 1]} ${targetYear}`,
       year: targetYear,
       categoriesByMonth,
