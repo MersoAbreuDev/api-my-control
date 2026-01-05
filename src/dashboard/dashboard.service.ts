@@ -61,6 +61,15 @@ export class DashboardService {
       .filter((t) => t.type === TransactionType.EXPENSE)
       .reduce((sum, t) => sum + t.amount, 0);
 
+    // Calcula receitas em aberto (a receber)
+    const receitasEmAberto = transactionsOpen
+      .filter((t) => t.type === TransactionType.INCOME)
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Calcula previsão de saldo futuro
+    // Saldo futuro = (receitas pagas + receitas em aberto) - (despesas pagas + despesas em aberto)
+    const saldoFuturo = (receitas + receitasEmAberto) - (despesas + despesasEmAberto);
+
     const monthNames = [
       'Jan',
       'Fev',
@@ -84,6 +93,8 @@ export class DashboardService {
       despesas,
       saldo,
       despesasEmAberto,
+      receitasEmAberto,
+      saldoFuturo,
       month: `${monthNames[targetMonth - 1]} ${targetYear}`,
       year: targetYear,
       categoriesByMonth,

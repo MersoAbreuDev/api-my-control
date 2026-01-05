@@ -58,6 +58,20 @@ export class DashboardResponseDto {
   despesasEmAberto: number;
 
   @ApiProperty({
+    description: 'Total de receitas em aberto no período (a receber)',
+    example: 100000,
+    type: Number,
+  })
+  receitasEmAberto: number;
+
+  @ApiProperty({
+    description: 'Previsão de saldo futuro considerando receitas e despesas em aberto. Fórmula: (receitas + receitasEmAberto) - (despesas + despesasEmAberto)',
+    example: 355000,
+    type: Number,
+  })
+  saldoFuturo: number;
+
+  @ApiProperty({
     description: 'Mês de referência',
     example: 'Jan 2026',
     type: String,
