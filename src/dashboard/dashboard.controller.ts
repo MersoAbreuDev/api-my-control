@@ -67,13 +67,20 @@ export class DashboardController {
   }
 
   /**
-   * Retorna a renda mês a mês pela categoria "Trabalho" com descrição e detalhes
+   * Retorna a renda do mês específico pela categoria "Trabalho" com descrição e detalhes
    * Útil para dashboard com transações detalhadas
    */
   @Get('work-income')
   @ApiOperation({
-    summary: 'Renda de trabalho mês a mês com detalhes',
-    description: 'Retorna todas as receitas pagas da categoria "Trabalho" agrupadas por mês, incluindo descrição, categoria e valores individuais. Útil para dashboard detalhado.',
+    summary: 'Renda de trabalho do mês específico com detalhes',
+    description: 'Retorna todas as receitas pagas da categoria "Trabalho" do mês e ano especificados, incluindo descrição, categoria e valores individuais. Útil para dashboard detalhado.',
+  })
+  @ApiQuery({
+    name: 'month',
+    required: false,
+    description: 'Mês (1-12). Se não informado, usa o mês atual',
+    type: Number,
+    example: 1,
   })
   @ApiQuery({
     name: 'year',
@@ -85,7 +92,7 @@ export class DashboardController {
   @ApiResponse({
     status: 200,
     description: 'Dados de renda de trabalho retornados com sucesso',
-    type: [WorkIncomeMonthlyDto],
+    type: WorkIncomeMonthlyDto,
   })
   @ApiResponse({
     status: 401,
@@ -93,9 +100,11 @@ export class DashboardController {
   })
   async getWorkIncomeByMonth(
     @CurrentUser() user: any,
+    @Query('month') month?: number,
     @Query('year') year?: number,
-  ): Promise<WorkIncomeMonthlyDto[]> {
+  ): Promise<WorkIncomeMonthlyDto> {
     return this.dashboardService.getWorkIncomeByMonth(
+      month ? parseInt(month.toString()) : undefined,
       year ? parseInt(year.toString()) : undefined,
     );
   }

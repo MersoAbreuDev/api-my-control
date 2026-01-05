@@ -154,16 +154,22 @@ export class DashboardService {
   }
 
   /**
-   * Retorna a renda mês a mês pela categoria "Trabalho" com descrição e detalhes
+   * Retorna a renda do mês específico pela categoria "Trabalho" com descrição e detalhes
    * Útil para dashboard com transações detalhadas
    */
-  async getWorkIncomeByMonth(year?: number): Promise<WorkIncomeMonthlyDto[]> {
+  async getWorkIncomeByMonth(month?: number, year?: number): Promise<WorkIncomeMonthlyDto> {
     const now = new Date();
+    const targetMonth = month ?? now.getMonth() + 1;
     const targetYear = year ?? now.getFullYear();
 
-    // Busca todas as receitas pagas da categoria "Trabalho" do ano
-    const startDate = new Date(targetYear, 0, 1);
-    const endDate = new Date(targetYear, 11, 31, 23, 59, 59);
+    // Validação do mês
+    if (targetMonth < 1 || targetMonth > 12) {
+      throw new Error('Mês inválido. Deve ser entre 1 e 12.');
+    }
+
+    // Busca receitas pagas da categoria "Trabalho" do mês específico
+    const startDate = new Date(targetYear, targetMonth - 1, 1);
+    const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59);
 
     const transactions = await this.transactionRepository.find({
       where: {
@@ -177,16 +183,17 @@ export class DashboardService {
       },
     });
 
-    // Agrupa transações por mês
-    const monthMap = new Map<number, Transaction[]>();
+    // Calcula total do mês
+    const totalValue = transactions.reduce((sum, t) => sum + t.amount, 0);
 
-    transactions.forEach((transaction) => {
-      const month = new Date(transaction.dueDate).getMonth() + 1; // 1-12
-      if (!monthMap.has(month)) {
-        monthMap.set(month, []);
-      }
-      monthMap.get(month)!.push(transaction);
-    });
+    // Converte transações para DTO
+    const transactionDtos: WorkTransactionDto[] = transactions.map((t) => ({
+      id: t.id,
+      description: t.description,
+      category: t.category,
+      amount: t.amount,
+      dueDate: t.dueDate.toISOString(),
+    }));
 
     // Converte para o formato de resposta
     const monthNames = [
@@ -204,32 +211,13 @@ export class DashboardService {
       'Dez',
     ];
 
-    const result: WorkIncomeMonthlyDto[] = [];
-
-    // Para cada mês do ano (1-12)
-    for (let month = 1; month <= 12; month++) {
-      const monthTransactions = monthMap.get(month) || [];
-      const totalValue = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
-
-      // Converte transações para DTO
-      const transactionDtos: WorkTransactionDto[] = monthTransactions.map((t) => ({
-        id: t.id,
-        description: t.description,
-        category: t.category,
-        amount: t.amount,
-        dueDate: t.dueDate.toISOString(),
-      }));
-
-      result.push({
-        month: `${monthNames[month - 1]} ${targetYear}`,
-        monthNumber: month,
-        year: targetYear,
-        totalValue,
-        transactions: transactionDtos,
-      });
-    }
-
-    return result;
+    return {
+      month: `${monthNames[targetMonth - 1]} ${targetYear}`,
+      monthNumber: targetMonth,
+      year: targetYear,
+      totalValue,
+      transactions: transactionDtos,
+    };
   }
 }
 
