@@ -37,10 +37,10 @@ export class TransactionsService {
   }
 
   /**
-   * Busca todas as transações do usuário
+   * Busca todas as transações (todos os usuários podem ver todas)
+   * userId é usado apenas para rastrear quem criou, não para filtrar
    */
   async findAll(
-    userId: number,
     type?: string,
     status?: string,
     month?: number,
@@ -48,7 +48,6 @@ export class TransactionsService {
   ): Promise<Transaction[]> {
     const queryBuilder = this.transactionRepository
       .createQueryBuilder('transaction')
-      .where('transaction.userId = :userId', { userId })
       .orderBy('transaction.dueDate', 'DESC');
 
     if (type) {
@@ -104,13 +103,11 @@ export class TransactionsService {
 
   /**
    * Busca uma transação por ID
+   * Todos os usuários autenticados podem ver qualquer transação
    */
-  async findOne(id: number, userId: number): Promise<Transaction> {
+  async findOne(id: number): Promise<Transaction> {
     const transaction = await this.transactionRepository.findOne({
-      where: {
-        id,
-        userId,
-      },
+      where: { id },
     });
 
     if (!transaction) {
@@ -122,6 +119,8 @@ export class TransactionsService {
 
   /**
    * Atualiza uma transação
+   * Todos os usuários autenticados podem atualizar qualquer transação
+   * userId é usado apenas para rastrear quem atualizou (updatedBy)
    */
   async update(
     id: number,
@@ -129,7 +128,7 @@ export class TransactionsService {
     updateTransactionDto: UpdateTransactionDto,
   ): Promise<Transaction> {
     // Verifica se a transação existe
-    const transaction = await this.findOne(id, userId);
+    const transaction = await this.findOne(id);
 
     if (updateTransactionDto.dueDate) {
       transaction.dueDate = new Date(updateTransactionDto.dueDate);
@@ -168,20 +167,23 @@ export class TransactionsService {
 
   /**
    * Remove uma transação
+   * Todos os usuários autenticados podem remover qualquer transação
    */
-  async remove(id: number, userId: number): Promise<void> {
+  async remove(id: number): Promise<void> {
     // Verifica se a transação existe
-    await this.findOne(id, userId);
+    await this.findOne(id);
 
     await this.transactionRepository.delete(id);
   }
 
   /**
    * Marca transação como paga
+   * Todos os usuários autenticados podem marcar qualquer transação como paga
+   * userId é usado apenas para rastrear quem atualizou (updatedBy)
    */
   async markAsPaid(id: number, userId: number): Promise<Transaction> {
     // Verifica se a transação existe
-    const transaction = await this.findOne(id, userId);
+    const transaction = await this.findOne(id);
 
     transaction.status = TransactionStatus.PAID;
     transaction.paidDate = new Date();

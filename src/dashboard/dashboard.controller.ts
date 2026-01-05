@@ -24,11 +24,12 @@ export class DashboardController {
 
   /**
    * Retorna resumo financeiro do mês
+   * Mostra resumo de todas as transações (todos os usuários)
    */
   @Get('summary')
   @ApiOperation({
     summary: 'Resumo financeiro',
-    description: 'Retorna o resumo financeiro (receitas, despesas e saldo) do mês especificado',
+    description: 'Retorna o resumo financeiro (receitas, despesas e saldo) do mês especificado. Inclui todas as transações de todos os usuários.',
   })
   @ApiQuery({
     name: 'month',
@@ -58,8 +59,8 @@ export class DashboardController {
     @Query('month') month?: number,
     @Query('year') year?: number,
   ): Promise<DashboardResponseDto> {
+    // userId não é mais usado para filtrar, apenas para rastreamento
     return this.dashboardService.getSummary(
-      user.userId,
       month ? parseInt(month.toString()) : undefined,
       year ? parseInt(year.toString()) : undefined,
     );

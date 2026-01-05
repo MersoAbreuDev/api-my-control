@@ -17,8 +17,10 @@ export class DashboardService {
 
   /**
    * Calcula resumo financeiro do mês
+   * Mostra resumo de todas as transações (todos os usuários)
+   * userId não é mais usado para filtrar, apenas para rastreamento
    */
-  async getSummary(userId: number, month?: number, year?: number): Promise<DashboardResponseDto> {
+  async getSummary(month?: number, year?: number): Promise<DashboardResponseDto> {
     const now = new Date();
     const targetMonth = month ?? now.getMonth() + 1;
     const targetYear = year ?? now.getFullYear();
@@ -27,10 +29,9 @@ export class DashboardService {
     const startDate = new Date(targetYear, targetMonth - 1, 1);
     const endDate = new Date(targetYear, targetMonth, 0, 23, 59, 59);
 
-    // Busca transações pagas do mês
+    // Busca transações pagas do mês (todas as transações, não apenas do usuário)
     const transactions = await this.transactionRepository.find({
       where: {
-        userId,
         status: TransactionStatus.PAID,
         dueDate: Between(startDate, endDate),
       },

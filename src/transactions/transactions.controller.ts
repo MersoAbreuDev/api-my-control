@@ -63,12 +63,12 @@ export class TransactionsController {
   }
 
   /**
-   * Lista todas as transações do usuário
+   * Lista todas as transações (todos os usuários podem ver todas)
    */
   @Get()
   @ApiOperation({
     summary: 'Listar transações',
-    description: 'Retorna todas as transações do usuário autenticado, com filtros opcionais',
+    description: 'Retorna todas as transações do sistema. Todos os usuários autenticados podem ver todas as transações. O campo userId indica apenas quem criou a transação.',
   })
   @ApiQuery({
     name: 'type',
@@ -111,7 +111,8 @@ export class TransactionsController {
     @Query('month') month?: number,
     @Query('year') year?: number,
   ) {
-    return this.transactionsService.findAll(user.userId, type, status, month, year);
+    // userId não é mais usado para filtrar, apenas para rastreamento
+    return this.transactionsService.findAll(type, status, month, year);
   }
 
   /**
@@ -140,7 +141,8 @@ export class TransactionsController {
     description: 'Não autenticado',
   })
   findOne(@CurrentUser() user: any, @Param('id', ParseIntPipe) id: number) {
-    return this.transactionsService.findOne(id, user.userId);
+    // Todos os usuários autenticados podem ver qualquer transação
+    return this.transactionsService.findOne(id);
   }
 
   /**
@@ -202,7 +204,8 @@ export class TransactionsController {
     description: 'Não autenticado',
   })
   remove(@CurrentUser() user: any, @Param('id', ParseIntPipe) id: number) {
-    this.transactionsService.remove(id, user.userId);
+    // Todos os usuários autenticados podem remover qualquer transação
+    this.transactionsService.remove(id);
     return { message: 'Transação excluída com sucesso' };
   }
 
