@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Transaction, TransactionType, TransactionStatus } from '../entities/transaction.entity';
-import { DashboardResponseDto } from './dto/dashboard-response.dto';
+import { DashboardResponseDto, CategoryMonthlyDataDto } from './dto/dashboard-response.dto';
 
 /**
  * Serviço de dashboard
@@ -63,13 +63,94 @@ export class DashboardService {
       'Dez',
     ];
 
+    // Calcula dados por categoria mês a mês (apenas contas pagas)
+    const categoriesByMonth = await this.getCategoriesByMonth(targetYear);
+
     return {
       receitas,
       despesas,
       saldo,
       month: `${monthNames[targetMonth - 1]} ${targetYear}`,
       year: targetYear,
+      categoriesByMonth,
     };
+  }
+
+  /**
+   * Calcula soma de valores por categoria, mês a mês (apenas contas pagas)
+   */
+  async getCategoriesByMonth(year: number): Promise<CategoryMonthlyDataDto[]> {
+    // Busca todas as transações pagas do ano
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+    const transactions = await this.transactionRepository.find({
+      where: {
+        status: TransactionStatus.PAID,
+        dueDate: Between(startDate, endDate),
+      },
+    });
+
+    // Agrupa por categoria
+    const categoryMap = new Map<string, Map<number, number>>();
+
+    transactions.forEach((transaction) => {
+      const category = transaction.category;
+      const month = new Date(transaction.dueDate).getMonth() + 1; // 1-12
+
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, new Map());
+      }
+
+      const monthMap = categoryMap.get(category)!;
+      const currentValue = monthMap.get(month) || 0;
+      monthMap.set(month, currentValue + transaction.amount);
+    });
+
+    // Converte para o formato de resposta
+    const monthNames = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+
+    const result: CategoryMonthlyDataDto[] = [];
+
+    categoryMap.forEach((monthMap, category) => {
+      const monthlyData: Array<{ month: string; value: number }> = [];
+      
+      // Para cada mês do ano (1-12)
+      for (let month = 1; month <= 12; month++) {
+        const value = monthMap.get(month) || 0;
+        if (value > 0) {
+          monthlyData.push({
+            month: `${monthNames[month - 1]} ${year}`,
+            value,
+          });
+        }
+      }
+
+      if (monthlyData.length > 0) {
+        result.push({
+          category,
+          monthlyData,
+        });
+      }
+    });
+
+    // Ordena por categoria
+    result.sort((a, b) => a.category.localeCompare(b.category));
+
+    return result;
   }
 }
 
