@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Transaction, TransactionType, TransactionStatus } from '../entities/transaction.entity';
-import { DashboardResponseDto, CategoryMonthlyDataDto } from './dto/dashboard-response.dto';
+import { DashboardResponseDto, CategoryMonthlyDataDto, WorkIncomeMonthlyDto } from './dto/dashboard-response.dto';
 
 /**
  * Serviço de dashboard
@@ -149,6 +149,68 @@ export class DashboardService {
 
     // Ordena por categoria
     result.sort((a, b) => a.category.localeCompare(b.category));
+
+    return result;
+  }
+
+  /**
+   * Retorna a maior renda mês a mês pela categoria "Trabalho"
+   * Útil para preencher gráficos de renda mensal
+   */
+  async getWorkIncomeByMonth(year?: number): Promise<WorkIncomeMonthlyDto[]> {
+    const now = new Date();
+    const targetYear = year ?? now.getFullYear();
+
+    // Busca todas as receitas pagas da categoria "Trabalho" do ano
+    const startDate = new Date(targetYear, 0, 1);
+    const endDate = new Date(targetYear, 11, 31, 23, 59, 59);
+
+    const transactions = await this.transactionRepository.find({
+      where: {
+        type: TransactionType.INCOME,
+        category: 'Trabalho',
+        status: TransactionStatus.PAID,
+        dueDate: Between(startDate, endDate),
+      },
+    });
+
+    // Agrupa por mês e soma os valores
+    const monthMap = new Map<number, number>();
+
+    transactions.forEach((transaction) => {
+      const month = new Date(transaction.dueDate).getMonth() + 1; // 1-12
+      const currentValue = monthMap.get(month) || 0;
+      monthMap.set(month, currentValue + transaction.amount);
+    });
+
+    // Converte para o formato de resposta
+    const monthNames = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+
+    const result: WorkIncomeMonthlyDto[] = [];
+
+    // Para cada mês do ano (1-12)
+    for (let month = 1; month <= 12; month++) {
+      const value = monthMap.get(month) || 0;
+      result.push({
+        month: `${monthNames[month - 1]} ${targetYear}`,
+        value,
+        monthNumber: month,
+        year: targetYear,
+      });
+    }
 
     return result;
   }

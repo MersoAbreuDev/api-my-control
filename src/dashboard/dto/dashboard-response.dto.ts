@@ -87,3 +87,36 @@ export class DashboardResponseDto {
   categoriesByMonth: CategoryMonthlyDataDto[];
 }
 
+/**
+ * DTO para maior renda mês a mês (categoria Trabalho)
+ */
+export class WorkIncomeMonthlyDto {
+  @ApiProperty({
+    description: 'Mês formatado',
+    example: 'Jan 2026',
+    type: String,
+  })
+  month: string;
+
+  @ApiProperty({
+    description: 'Valor total da renda de trabalho no mês (em centavos)',
+    example: 500000,
+    type: Number,
+  })
+  value: number;
+
+  @ApiProperty({
+    description: 'Número do mês (1-12)',
+    example: 1,
+    type: Number,
+  })
+  monthNumber: number;
+
+  @ApiProperty({
+    description: 'Ano',
+    example: 2026,
+    type: Number,
+  })
+  year: number;
+}
+

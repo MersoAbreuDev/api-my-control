@@ -7,7 +7,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
-import { DashboardResponseDto } from './dto/dashboard-response.dto';
+import { DashboardResponseDto, WorkIncomeMonthlyDto } from './dto/dashboard-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -62,6 +62,40 @@ export class DashboardController {
     // userId não é mais usado para filtrar, apenas para rastreamento
     return this.dashboardService.getSummary(
       month ? parseInt(month.toString()) : undefined,
+      year ? parseInt(year.toString()) : undefined,
+    );
+  }
+
+  /**
+   * Retorna a maior renda mês a mês pela categoria "Trabalho"
+   * Útil para preencher gráficos de renda mensal
+   */
+  @Get('work-income')
+  @ApiOperation({
+    summary: 'Renda de trabalho mês a mês',
+    description: 'Retorna a soma de todas as receitas pagas da categoria "Trabalho" mês a mês, útil para preencher gráficos.',
+  })
+  @ApiQuery({
+    name: 'year',
+    required: false,
+    description: 'Ano (ex: 2026). Se não informado, usa o ano atual',
+    type: Number,
+    example: 2026,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados de renda de trabalho retornados com sucesso',
+    type: [WorkIncomeMonthlyDto],
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Não autenticado',
+  })
+  async getWorkIncomeByMonth(
+    @CurrentUser() user: any,
+    @Query('year') year?: number,
+  ): Promise<WorkIncomeMonthlyDto[]> {
+    return this.dashboardService.getWorkIncomeByMonth(
       year ? parseInt(year.toString()) : undefined,
     );
   }
