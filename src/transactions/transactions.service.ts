@@ -45,17 +45,28 @@ export class TransactionsService {
     status?: string,
     month?: number,
     year?: number,
+    category?: string,
   ): Promise<Transaction[]> {
+    console.log('[DEBUG Service] Parâmetros recebidos no findAll:', { type, status, month, year, category });
+    
     const queryBuilder = this.transactionRepository
       .createQueryBuilder('transaction')
       .orderBy('transaction.dueDate', 'DESC');
 
-    if (type) {
-      queryBuilder.andWhere('transaction.type = :type', { type });
+    // Filtrar por categoria - PRIORITÁRIO - aplicar primeiro
+    if (category && category.trim() !== '') {
+      const normalizedCategory = category.trim();
+      queryBuilder.andWhere('transaction.category = :category', { category: normalizedCategory });
+      console.log(`[DEBUG Service] Aplicando filtro por categoria: "${normalizedCategory}"`);
     }
 
-    if (status) {
-      queryBuilder.andWhere('transaction.status = :status', { status });
+    // Aplicar filtros de tipo e status
+    if (type && type.trim() !== '') {
+      queryBuilder.andWhere('transaction.type = :type', { type: type.trim() });
+    }
+
+    if (status && status.trim() !== '') {
+      queryBuilder.andWhere('transaction.status = :status', { status: status.trim() });
     }
 
     // Filtrar por mês e ano baseado na data de vencimento (dueDate)
@@ -66,12 +77,8 @@ export class TransactionsService {
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
       
-      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', {
-        startDate,
-      });
-      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', {
-        endDate,
-      });
+      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', { startDate });
+      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', { endDate });
     } else if (month) {
       // Se só tiver mês, usa o ano atual
       const currentYear = new Date().getFullYear();
@@ -79,26 +86,29 @@ export class TransactionsService {
       const lastDay = new Date(currentYear, month, 0).getDate();
       const endDate = `${currentYear}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
       
-      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', {
-        startDate,
-      });
-      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', {
-        endDate,
-      });
+      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', { startDate });
+      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', { endDate });
     } else if (year) {
       // Se só tiver ano, filtra todo o ano
       const startDate = `${year}-01-01`;
       const endDate = `${year}-12-31`;
       
-      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', {
-        startDate,
-      });
-      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', {
-        endDate,
-      });
+      queryBuilder.andWhere('DATE(transaction.dueDate) >= :startDate', { startDate });
+      queryBuilder.andWhere('DATE(transaction.dueDate) <= :endDate', { endDate });
     }
 
-    return queryBuilder.getMany();
+    const sql = queryBuilder.getSql();
+    const parameters = queryBuilder.getParameters();
+    console.log('[DEBUG Service] SQL Query gerada:', sql);
+    console.log('[DEBUG Service] Parâmetros da query:', JSON.stringify(parameters, null, 2));
+    
+    const results = await queryBuilder.getMany();
+    console.log(`[DEBUG Service] Total de transações retornadas: ${results.length}`);
+    if (category && results.length > 0) {
+      console.log(`[DEBUG Service] Primeira transação retornada - categoria: "${results[0].category}"`);
+    }
+
+    return results;
   }
 
   /**

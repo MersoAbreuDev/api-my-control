@@ -63,6 +63,10 @@ export class CreateTransactionDto {
       'Trabalho',
       'Utilidades',
       'Outros',
+      'Food',
+      'Combustivel',
+      'Beleza',
+      'Bebidas',
     ],
   })
   @IsString({ message: 'Categoria deve ser uma string' })

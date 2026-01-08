@@ -68,7 +68,7 @@ export class TransactionsController {
   @Get()
   @ApiOperation({
     summary: 'Listar transações',
-    description: 'Retorna todas as transações do sistema. Todos os usuários autenticados podem ver todas as transações. O campo userId indica apenas quem criou a transação.',
+    description: 'Retorna todas as transações do sistema. Todos os usuários autenticados podem ver todas as transações. O campo userId indica apenas quem criou a transação. Pode ser filtrado por type, status, month, year e category. Quando um filtro é aplicado, apenas as transações que correspondem aos critérios são retornadas.',
   })
   @ApiQuery({
     name: 'type',
@@ -96,6 +96,13 @@ export class TransactionsController {
     type: Number,
     example: 2026,
   })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    description: 'Filtrar por categoria. Exemplos: Food, Combustivel, Beleza, Bebidas, Alimentação, Transporte, etc.',
+    type: String,
+    example: 'Food',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de transações retornada com sucesso',
@@ -110,9 +117,24 @@ export class TransactionsController {
     @Query('status') status?: string,
     @Query('month') month?: number,
     @Query('year') year?: number,
+    @Query('category') category?: string,
   ) {
     // userId não é mais usado para filtrar, apenas para rastreamento
-    return this.transactionsService.findAll(type, status, month, year);
+    // Log para debug - remover em produção
+    console.log('[DEBUG Controller] Parâmetros recebidos:', {
+      type,
+      status,
+      month,
+      year,
+      category,
+      categoryType: typeof category,
+      categoryLength: category?.length,
+    });
+    
+    // Decodifica a categoria se vier codificada na URL
+    const decodedCategory = category ? decodeURIComponent(category) : undefined;
+    
+    return this.transactionsService.findAll(type, status, month, year, decodedCategory);
   }
 
   /**
