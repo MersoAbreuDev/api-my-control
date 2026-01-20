@@ -12,6 +12,7 @@ async function bootstrap() {
     'http://localhost:3000',
     'https://my-control-phi.vercel.app',
     'http://api-jhukyy-dcf077-168-231-92-86.traefik.me',
+    'https://api-jhukyy-dcf077-168-231-92-86.traefik.me', // Adiciona HTTPS
   ];
   
   const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -22,11 +23,26 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Permite requisições sem origin (mobile apps, Postman, etc.)
-      if (!origin) return callback(null, true);
+      // Log para debug
+      console.log(`🔍 CORS - Requisição recebida de origem: ${origin || 'sem origem (mobile/Postman)'}`);
       
-      // Permite origens na lista
+      // Permite requisições sem origin (mobile apps, Postman, etc.)
+      if (!origin) {
+        console.log('✅ CORS permitido: requisição sem origin');
+        return callback(null, true);
+      }
+      
+      // Permite origens na lista (HTTP e HTTPS)
       if (allowedOrigins.includes(origin)) {
+        console.log(`✅ CORS permitido: origem na lista - ${origin}`);
+        return callback(null, true);
+      }
+      
+      // Permite versão HTTP/HTTPS da mesma origem
+      const httpVersion = origin.replace('https://', 'http://');
+      const httpsVersion = origin.replace('http://', 'https://');
+      if (allowedOrigins.includes(httpVersion) || allowedOrigins.includes(httpsVersion)) {
+        console.log(`✅ CORS permitido: versão alternativa da origem - ${origin}`);
         return callback(null, true);
       }
       
@@ -42,13 +58,18 @@ async function bootstrap() {
         return callback(null, true);
       }
       
+      // Em produção, bloqueia origens não autorizadas
+      // Para permitir uma nova origem, adicione em defaultOrigins ou via ALLOWED_ORIGINS
       console.warn(`⚠️ CORS bloqueado para origem: ${origin}`);
+      console.warn(`💡 Dica: Adicione esta origem em defaultOrigins ou configure ALLOWED_ORIGINS`);
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposedHeaders: ['Authorization'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Validação global de DTOs
