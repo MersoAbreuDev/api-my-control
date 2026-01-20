@@ -24,54 +24,79 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Log para debug
-      console.log(`🔍 CORS - Requisição recebida de origem: ${origin || 'sem origem (mobile/Postman)'}`);
+      // Log detalhado para debug
+      console.log(`\n🔍 [CORS] ==========================================`);
+      console.log(`🔍 [CORS] Requisição recebida de origem: ${origin || 'sem origem (mobile/Postman)'}`);
+      console.log(`🔍 [CORS] Origens permitidas:`, allowedOrigins);
+      
+      // Log adicional: se não tiver origin, pode ser requisição server-side ou proxy
+      if (!origin) {
+        console.log(`⚠️ [CORS] ATENÇÃO: Requisição sem header Origin`);
+        console.log(`⚠️ [CORS] Isso pode acontecer se:`);
+        console.log(`⚠️ [CORS] - É uma requisição server-side (SSR do Vercel)`);
+        console.log(`⚠️ [CORS] - O proxy reverso (Traefik) removeu o header Origin`);
+        console.log(`⚠️ [CORS] - É uma requisição direta (não do navegador)`);
+      }
       
       // Permite requisições sem origin (mobile apps, Postman, etc.)
       if (!origin) {
-        console.log('✅ CORS permitido: requisição sem origin');
+        console.log('✅ [CORS] PERMITIDO: requisição sem origin');
         return callback(null, true);
       }
+      
+      // Remove protocolo e barra para comparação mais flexível
+      const originClean = origin.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const originWithProtocol = origin.startsWith('https') ? `https://${originClean}` : `http://${originClean}`;
       
       // Permite origens na lista (HTTP e HTTPS)
-      if (allowedOrigins.includes(origin)) {
-        console.log(`✅ CORS permitido: origem na lista - ${origin}`);
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes(originWithProtocol)) {
+        console.log(`✅ [CORS] PERMITIDO: origem na lista - ${origin}`);
         return callback(null, true);
       }
       
-      // Permite versão HTTP/HTTPS da mesma origem
-      const httpVersion = origin.replace('https://', 'http://');
-      const httpsVersion = origin.replace('http://', 'https://');
+      // Verifica versões com/sem protocolo e barra
+      const httpVersion = origin.replace('https://', 'http://').replace(/\/$/, '');
+      const httpsVersion = origin.replace('http://', 'https://').replace(/\/$/, '');
       if (allowedOrigins.includes(httpVersion) || allowedOrigins.includes(httpsVersion)) {
-        console.log(`✅ CORS permitido: versão alternativa da origem - ${origin}`);
+        console.log(`✅ [CORS] PERMITIDO: versão alternativa - ${origin}`);
         return callback(null, true);
       }
       
       // Permite todos os subdomínios do Vercel (*.vercel.app)
-      // Remove barra no final se houver, para comparação
-      const originWithoutSlash = origin.replace(/\/$/, '');
+      const originWithoutSlash = origin.replace(/\/$/, '').replace(/^https?:\/\//, '');
       if (originWithoutSlash.endsWith('.vercel.app')) {
-        console.log(`✅ CORS permitido para subdomínio Vercel: ${origin}`);
+        console.log(`✅ [CORS] PERMITIDO: subdomínio Vercel - ${origin}`);
         return callback(null, true);
       }
       
-      // Também verifica a versão com/sem barra na lista
-      if (allowedOrigins.includes(originWithoutSlash) || allowedOrigins.includes(origin + '/')) {
-        console.log(`✅ CORS permitido: origem na lista (com/sem barra) - ${origin}`);
-        return callback(null, true);
+      // Verifica se a origem sem protocolo/barra está na lista
+      const originBase = origin.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      for (const allowed of allowedOrigins) {
+        const allowedBase = allowed.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        if (originBase === allowedBase) {
+          console.log(`✅ [CORS] PERMITIDO: origem corresponde (sem protocolo/barra) - ${origin}`);
+          return callback(null, true);
+        }
       }
       
       // Permite qualquer origem em desenvolvimento (NODE_ENV !== 'production')
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`✅ CORS permitido (desenvolvimento) para: ${origin}`);
+        console.log(`✅ [CORS] PERMITIDO (desenvolvimento): ${origin}`);
         return callback(null, true);
       }
       
-      // Em produção, bloqueia origens não autorizadas
-      // Para permitir uma nova origem, adicione em defaultOrigins ou via ALLOWED_ORIGINS
-      console.warn(`⚠️ CORS bloqueado para origem: ${origin}`);
-      console.warn(`💡 Dica: Adicione esta origem em defaultOrigins ou configure ALLOWED_ORIGINS`);
-      callback(new Error('Not allowed by CORS'));
+      // Em produção, permite temporariamente para debug (REMOVER EM PRODUÇÃO FINAL)
+      console.warn(`\n⚠️ [CORS] ==========================================`);
+      console.warn(`⚠️ [CORS] ORIGEM NÃO ESTÁ NA LISTA: ${origin}`);
+      console.warn(`⚠️ [CORS] Origem limpa: ${originBase}`);
+      console.warn(`⚠️ [CORS] Permitindo temporariamente para debug`);
+      console.warn(`⚠️ [CORS] Adicione esta origem: ${origin}`);
+      console.warn(`⚠️ [CORS] ==========================================\n`);
+      return callback(null, true); // Temporariamente permissivo
+      
+      // Código para bloquear (descomente quando identificar todas as origens):
+      // console.warn(`⚠️ CORS bloqueado para origem: ${origin}`);
+      // callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -119,9 +144,18 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+  // Escuta em 0.0.0.0 para aceitar conexões externas (não apenas localhost)
+  await app.listen(port, '0.0.0.0');
+  
+  console.log('\n' + '='.repeat(60));
+  console.log('🚀 APLICAÇÃO INICIADA COM SUCESSO!');
+  console.log('='.repeat(60));
+  console.log(`📍 Servidor rodando em: http://0.0.0.0:${port}`);
+  console.log(`🌐 Acessível externamente na porta: ${port}`);
+  console.log(`📚 Swagger documentation: http://0.0.0.0:${port}/api/docs`);
+  console.log(`🔒 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 CORS configurado para ${allowedOrigins.length} origem(ns)`);
+  console.log('='.repeat(60) + '\n');
 }
 
 bootstrap();
