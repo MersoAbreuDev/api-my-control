@@ -11,8 +11,9 @@ async function bootstrap() {
     'http://localhost:4200',
     'http://localhost:3000',
     'https://my-control-phi.vercel.app',
+    'https://my-control-2bgdtqlwq-control-apps-projects-c58bc4ce.vercel.app',
     'http://api-jhukyy-dcf077-168-231-92-86.traefik.me',
-    'https://api-jhukyy-dcf077-168-231-92-86.traefik.me', // Adiciona HTTPS
+    'https://api-jhukyy-dcf077-168-231-92-86.traefik.me',
   ];
   
   const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -47,8 +48,16 @@ async function bootstrap() {
       }
       
       // Permite todos os subdomínios do Vercel (*.vercel.app)
-      if (origin.endsWith('.vercel.app')) {
+      // Remove barra no final se houver, para comparação
+      const originWithoutSlash = origin.replace(/\/$/, '');
+      if (originWithoutSlash.endsWith('.vercel.app')) {
         console.log(`✅ CORS permitido para subdomínio Vercel: ${origin}`);
+        return callback(null, true);
+      }
+      
+      // Também verifica a versão com/sem barra na lista
+      if (allowedOrigins.includes(originWithoutSlash) || allowedOrigins.includes(origin + '/')) {
+        console.log(`✅ CORS permitido: origem na lista (com/sem barra) - ${origin}`);
         return callback(null, true);
       }
       
